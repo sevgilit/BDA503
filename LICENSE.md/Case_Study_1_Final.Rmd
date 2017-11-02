@@ -1,0 +1,159 @@
+---
+title: "Case Study: Welcome to University"
+author: "datING - BDA 503 - Fall 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+ 
+*************
+<p></br></p>
+### <span style="color:#e67e22">**Introduction**</span>
+
+In this case study our group are going to explore university entrance examinations (YGS/LYS) data from 2017. 
+
+Dataset consists of undergraduate programs offered in 2017. Each program offers an availability (i.e. quota). Then students get placed according to their lists and their scores. Each program is filled with the students ranked by their scores until placements are equal to availability. Student placed to a a program with the highest score forms the maximum score of that program and the last student to be placed forms the minimum score.
+
+MEF University management asks us to examine the data and provide insights that are useful to understand MEF University’s place among its competitors and in the undergraduate market. We decided to examine occupancy rate of quota which is found dividing the general placement into general quota. After assessment the university with analysis, we wil have an outcome and wil offer a suggestion to university management.
+
+*************
+
+####***Clean Data and Assign New Population***
+
+```{r,include=FALSE}
+#First, we load the data and addressed.
+library(readxl)
+osym_data_2017 <- read_excel("D:/Users/tkartalkaya/Desktop/Verisetleri/osym_data_2017.xlsx")
+```
+
+```{r, include=FALSE}
+#Load necessary packages.
+library(readr)
+library(tidyverse) 
+library(ggplot2) #visualisation
+library(formatR)
+library(knitr)
+library(dplyr)
+options(dplyr.width=Inf)
+```
+
+
++ First we had a quick review of number of rows and columns "osym_data_2017" dataset.
+```{r}
+dim(osym_data_2017)
+```
+
++ We filtered abroad universities that university management is not interested. (IDs that start with 3 or 4)
+```{r}
+#Filtered abroad university 
+osym_data_2017_except_abroad <- osym_data_2017 %>% 
+  filter(program_id<300000000)
+```
+
++ Let's see number of our new population excluding the abroad universities.
+```{r}
+dim(osym_data_2017_except_abroad)
+```
+
+### <span style="color:#e67e22">**Analysis**</span>
+
++ We found the occupancy rates of quota in all the universities.
+```{r}
+Occupancy_rate_of_quota <- osym_data_2017_except_abroad  %>% 
+  group_by(university_name) %>% 
+  summarise(total_quota = sum(general_quota),
+            total_placement = sum(general_placement),
+            Percentage=round((sum(general_placement)/sum(general_quota))*100)) %>% 
+  arrange(Percentage)
+
+Occupancy_rate_of_quota
+``` 
+
++ We found the occupancy rates of quota universities in İstanbul.
+```{r}
+Istanbul_Occupancy_rate_of_quota <- osym_data_2017_except_abroad  %>% 
+  filter(city == "İSTANBUL")%>% 
+  group_by(university_name) %>% 
+  summarise(total_quota = sum(general_quota),
+            total_placement = sum(general_placement),
+            Percentage=round((sum(general_placement)/sum(general_quota))*100)) %>% 
+  arrange(Percentage)
+
+Istanbul_Occupancy_rate_of_quota
+``` 
+
++ Let's visualize the occupancy rates of quota universities in İstanbul.
+```{r,fig.width=12}
+ggplot(Istanbul_Occupancy_rate_of_quota, aes(x=reorder(university_name,Percentage), y=Percentage)) +
+  geom_bar(stat = "identity", aes(fill=Istanbul_Occupancy_rate_of_quota$university_name=='MEF ÜNİVERSİTESİ')) +
+  labs(title="Occupancy Rate of Quota Universities in Istanbul",x="University",y="Quota Occupancy Rate",fill="") +
+  theme (axis.text.x=element_text (angle=-90,vjust=0.5, hjust=0)) +
+  scale_fill_manual(values = c('#f39c12', '#e67e22'),guide=FALSE)
+``` 
+
++ Then we found the occupancy rates of quota of MEF University to compare with all universities and İstanbul located universities.
+```{r}
+MEF_Occupancy_rate_of_quota <- osym_data_2017_except_abroad  %>% 
+  filter(university_name == "MEF ÜNİVERSİTESİ")%>% 
+  group_by(faculty_name) %>% 
+  summarise(total_quota = sum(general_quota), 
+            total_placement = sum(general_placement),
+            Percentage=round((sum(general_placement)/sum(general_quota))*100)) %>% 
+  arrange(Percentage)
+
+MEF_Occupancy_rate_of_quota
+``` 
+
++ Let's visualize the occupancy rates of quota of MEF University with respect to faculty.
+```{r,fig.width=12}
+ggplot(MEF_Occupancy_rate_of_quota, aes(x=reorder(faculty_name,Percentage),y=Percentage)) +
+  geom_bar(stat = "identity",colour="black", fill="#e67e22", width=.5,) +
+  labs(title="Quota Occupancy Rate of Each Faculty of MEF University",x="Faculty",y="Percentage",fill="") +
+  theme (axis.text.x=element_text(angle=0,vjust=1, hjust=1)) +
+  coord_flip()
+``` 
+
++ Means of occupancy rates of quota.
+```{r}
+All_universities_mean<-round(mean(Occupancy_rate_of_quota$Percentage))
+İstanbul_universities_mean<-round(mean(Istanbul_Occupancy_rate_of_quota$Percentage))
+
+MEF_Rate<- Istanbul_Occupancy_rate_of_quota  %>% 
+  select(university_name, Percentage) %>%
+  filter(university_name == "MEF ÜNİVERSİTESİ")
+```  
+
++ We arranged the means and visualize to compare the occupancy rates of quota.
+```{r}
+Percentages=data.frame(name=c("All_Universities", "Istanbul","MEF") ,  value=c(All_universities_mean,İstanbul_universities_mean,MEF_Rate$Percentage))
+
+ggplot(Percentages, aes(x=reorder(name,value), y=value)) + 
+  geom_bar(stat = "identity",colour="black", fill="#e67e22", width=.5,)+
+  labs(title="Comparing Quota Occupancy Rate",x="Percentage",y="Quota Occupancy Rate",fill="") +
+  theme (axis.text.x=element_text(angle=0,vjust=2, hjust=2)) +
+  coord_flip()
+```   
+
++ As a result, we saw that 3 programs are mentioned below in MEF University have below according its quota.
+```{r}
+MEF_Program_Rate <- osym_data_2017_except_abroad  %>% 
+  filter(university_name == "MEF ÜNİVERSİTESİ")%>% 
+  group_by(program_name) %>% 
+  summarise(total_quota = sum(general_quota), 
+            total_placement = sum(general_placement),
+            Percentage=round((sum(general_placement)/sum(general_quota))*100)) %>% 
+  filter(Percentage < 100) 
+
+MEF_Program_Rate
+``` 
+
+### <span style="color:#e67e22">**Conclusion**</span>
+
+According to the universites' occupancy rates of quota, MEF University has 3 program which is not full quota. On the other hand, occupancy rates of quota is higher than universities in Turkey /İstanbul. We suggest an offor to MEF University Management to decrease the quota of 3 non-full programs.
+
+
+<center><div style="width:300px; height=200px">![](D:/Users/tkartalkaya/Desktop/Ösym.jpg)</div></center>
+
+
