@@ -5,49 +5,48 @@
 # Find out more about building applications with Shiny here:
 #
 #    http://shiny.rstudio.com/
-#
+
 
 library(shiny)
+library(leaflet)
+# Define UI
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
-   
-   # Application title
-   titlePanel("Total quota/Total Placement"),
-   
-   # Sidebar with a slider input for number of bins 
-   sidebarLayout(
-      sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 30,
-                     value = 10)
-      ),
-      
-      # Show a plot of the generated distribution
-      mainPanel(
-         plotOutput("distPlot")
-      )
-   )
+  # Give the page a title
+  titlePanel("Terrorism in Turkey"),
+  # Generate a row with a sidebar
+  sidebarPanel(
+    sliderInput(inputId = "year", label = "Year of Casualty:",
+                value = 2010, min = 1970, max = 2016),
+    hr(),
+    helpText("Source: Global Terrorism Database, START Consortium")
+  ),
+  # Show a plot of the generated distribution
+  mainPanel(
+    leafletOutput("map")
+  )
 )
-x<- selec
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-   
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      y   <- shiny1[,2]
-      x <- y[[1]]
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
-      
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
-}
+
+
+# Define server logic
+
+server <- shinyServer(function(input, output) {
+  p = data.frame(year=gtd.turkey$year,lon=gtd.turkey$longitude, lat=gtd.turkey$latitude)
+  
+  output$map = renderLeaflet({
+    leaflet() %>%
+      addProviderTiles("Stamen.TonerLite") %>% 
+      setView(lng = 34.85427, lat = 39.91987, zoom = 5)
+  })
+  observe({
+    leafletProxy("map") %>% clearShapes()%>%
+      addCircles(data = p[grepl(input$year, p$year),],color = '#e67e22',weight = 10)
+  })
+})
 
 # Run the application 
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
 
-
-min(x)
+#Leaflet Providers/  http://leaflet-extras.github.io/leaflet-providers/preview/
+#Stamen.TonerLite
+#Esri.WorldGrayCanvas
